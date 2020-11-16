@@ -560,28 +560,28 @@ void sequential(cosma_context<Scalar> *ctx,
 }
 
 template <typename T>
-T which_is_expanded(T &&A,
-                    T &&B,
-                    T &&C,
+T& which_is_expanded(T &A,
+                    T &B,
+                    T &C,
                     const Strategy &strategy,
                     size_t step) {
     // divn > 1 => divm==divk==1 => matrix A has not been splitted
     // therefore it is expanded (in the communication of a parallel step)
     if (strategy.split_n(step))
-        return std::forward<T>(A);
+        return A;
 
     // divm > 1 => divk==divn==1 => matrix B has not been splitted
     // therefore it is expanded (in the communication of a parallel step)
     if (strategy.split_m(step))
-        return std::forward<T>(B);
+        return B;
 
     // divk > 1 => divm==divn==1 => matrix C has not been splitted
     // therefore it is expanded (in the communication of a parallel step)
     if (strategy.split_k(step))
-        return std::forward<T>(C);
+        return C;
 
     // this should never happen
-    return std::forward<T>(C);
+    return C;
 }
 
 /*

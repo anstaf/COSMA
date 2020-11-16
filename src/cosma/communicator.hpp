@@ -11,13 +11,15 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <tuple>
+#include <memory>
 
 namespace cosma {
 class communicator {
   public:
     communicator() = default;
+    communicator(communicator const&) = delete;
+    communicator(communicator&&) = default;
     communicator(const Strategy *strategy, MPI_Comm comm);
-    ~communicator();
 
     /* In each communication step, processors are split and the communication is
      * performed. P processors are split into d groups (d = divisor in this
@@ -180,11 +182,6 @@ class communicator {
 
     const Strategy *strategy();
 
-    // barrier over all the ranks taking part in the multiplication
-    void full_barrier();
-    // barrier over the active communicator in step
-    void barrier(int step);
-
     // communicator active in step
     MPI_Comm active_comm(int step);
     MPI_Comm full_comm();
@@ -197,8 +194,6 @@ class communicator {
     // or does not yield a convenient processor decomposition
     bool is_idle();
 
-    // wrappers around MPI_Comm_free and MPI_Group_free
-    static void free_comm(MPI_Comm &comm);
     static void free_group(MPI_Group &comm_group);
 
     // wrapper around MPI_Finalize
@@ -222,14 +217,20 @@ class communicator {
     static int rank_inside_ring(Interval &P, int div, int global_rank);
     static int rank_outside_ring(Interval &P, int div, int off, int gp);
 
-  protected:
+  private:
+
+    struct free_comm_deleter {
+        void operator()(MPI_Comm* comm) const { MPI_Comm_free(comm); }
+    };
+    using mpi_ptr_t = std::unique_ptr<MPI_Comm, free_comm_deleter>;
+
     // hierarchy of communicators used throughout the algorithm
-    std::vector<MPI_Comm> comm_ring_;
-    std::vector<MPI_Comm> comm_subproblem_;
+    std::vector<mpi_ptr_t> comm_ring_;
+    std::vector<mpi_ptr_t> comm_subproblem_;
     int rank_;
     const Strategy *strategy_;
     std::vector<int> step_to_comm_index_;
-    MPI_Comm full_comm_;
+    mpi_ptr_t full_comm_;
     int comm_size_;
     // if true then not all processors were used
     // this usually happens if given number of processors
@@ -246,8 +247,6 @@ class communicator {
     MPI_Comm create_comm_ring(MPI_Comm comm, Interval &P, int offset, int div);
 
     MPI_Comm create_comm_subproblem(MPI_Comm comm, Interval &P, Interval &newP);
-
-    void free_comms();
 };
 
 } // namespace cosma
