@@ -14,14 +14,9 @@ struct Split {
     bool is(Dimension d) const { return dimension == d; }
     bool is(Label l) const { return has(l, dimension); }
     Dimensions divisors() const {
-        switch (dimension) {
-        case dim::m:
-            return {divisor, 1, 1};
-        case dim::n:
-            return {1, divisor, 1};
-        case dim::k:
-            return {1, 1, divisor};
-        }
+        Dimensions res = {1, 1, 1};
+        res[dimension] = divisor;
+        return res;
     }
 };
 
